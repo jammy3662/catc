@@ -1,6 +1,11 @@
 #include "token.h"
 #include <stdlib.h>
 
+/*
+I could put some tex here
+if i wanted to *and it (should work)
+*/
+
 Token getTok (FILE* src)
 {
 	if (!src)
@@ -229,18 +234,18 @@ Token getTok (FILE* src)
 			if (*current == '\n')
 			{
 				*current = 0;
-				*(current + 1) = 0;
-				return ret;
-			}
-			if (*current == '\n' && !escape)
-			{
-				*current = 0;
 				return ret;
 			}
 		}
 		else
+		if (type == BLOCK_COMMENT)
 		{
-			// ...
+			if (*current == '/' &&
+			    *(current - 1) == '*')
+			{
+				*(current - 1) = 0;
+				return ret;
+			}
 		}
 	}
 	

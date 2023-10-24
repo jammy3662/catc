@@ -18,6 +18,8 @@ enum Tok
 	
 	COMPARE,
 	
+	TEXT,
+	
 	INT_LITERAL,
 	HEX_LITERAL,
 	BIN_LITERAL,
@@ -31,8 +33,6 @@ enum Tok
 	
 	LINE_COMMENT,
 	BLOCK_COMMENT,
-	
-	TEXT,
 };
 
 struct Token
