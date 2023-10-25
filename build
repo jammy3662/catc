@@ -1,10 +1,11 @@
 #!/bin/tcsh
 
+mkdir -p bin
+
 cd bin
 clang++ -g3 -c ../src/*.cc
 cd ..
 
-mkdir -p bin
 clang++ bin/*.o -o catc
 
 exit $?
