@@ -7,9 +7,12 @@ int main (int argc, char** argv)
 	FILE* file = fopen (argv [1], "r");
 	
 	Token t;
-	while ((t = getTok (file)).id != NULLTOK)
+	t.id = NONE;
+	
+	while (t.id != NULLTOK)
 	{
-		printf ("%i\t\t%s\n", t.id, t.text);
+		t = getTok (file);
+		printf ("%i\t\t%s\n", (unsigned char) t.id, t.text);
 	}
 	
 	return 0;

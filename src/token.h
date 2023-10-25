@@ -1,13 +1,13 @@
 #include <stdio.h>
 
-enum Tok
+enum Tok: char
 {
 	// single printable ascii characters are their literal values
 	// i.e. PLUS = '+'
 	NULLTOK = -1,
 	NONE = 0,
 	
-	LESSEQUAL = '~' + 1,
+	LESSEQUAL = (char)('~' + 2),
 	MOREEQUAL,
 	PLUSEQUAL,
 	MINUSEEQUAL,

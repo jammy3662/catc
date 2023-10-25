@@ -1,10 +1,104 @@
 #include "token.h"
 #include <stdlib.h>
+#include <array>
+using namespace std;
 
-/*
-I could put some tex here
-if i wanted to *and it (should work)
-*/
+char hold = 0;
+
+void get (char* c, FILE* source = 0x0)
+{
+	static FILE* src = 0x0;
+	if (!src) src = source;
+	
+	if (hold)
+	{
+		*c = hold;
+		hold = 0;
+	}
+	else
+		*c = fgetc (src);
+}
+
+bool alphachar (char c)
+{
+	return (c >= 'a' && c <= 'z' ||
+	        c >= 'A' && c <= 'Z');
+}
+
+bool numchar (char c)
+{
+	return (c >= '0' && c <= '9');
+}
+
+char getKind (char* current, FILE* src)
+{
+	if (hold)
+	{
+		*current = hold;
+		hold = 0;
+	}
+	else
+		*current = fgetc (src);
+	
+	while ((unsigned char)*current <= ' ')
+		// skip over whitespace chars
+		*current = fgetc (src);
+	
+	if (*current == (char)-1) return NULLTOK;
+	
+	if (numchar (*current))
+	{
+		if (*current == '0')
+		{
+			hold = fgetc (src);
+			
+			if (hold == 'b')
+				return BIN_LITERAL;
+			else
+			if (hold == 'o')
+				return OCT_LITERAL;
+			else
+			if (hold == 'x')
+				return HEX_LITERAL;
+		}
+		return INT_LITERAL;
+	}
+	else
+	
+	if (alphachar (*current) || *current == '_')
+		return TEXT;
+	
+	else if (*current == '"') return STRING_LITERAL;
+	else if (*current == '\'') return CHAR_LITERAL;
+	
+	else if (*current == '/')
+	{
+		hold = fgetc (src);
+		
+		// in case of a comment,
+		// skip over the slashes / asterisk
+		if (hold == '/')
+		{
+			*current = fgetc (src);
+			hold = 0;
+			return LINE_COMMENT;
+		}
+		else
+		if (hold == '*')
+		{
+			*current = fgetc (src);
+			hold = 0;
+			return BLOCK_COMMENT;
+		}
+		
+		return '/';
+	}
+	else
+	if (*current > ' ' &&
+	    *current <= '~') return *current;
+	
+	return NONE;
+}
 
 Token getTok (FILE* src)
 {
@@ -14,109 +108,21 @@ Token getTok (FILE* src)
 		return (Token){.id = NULLTOK};
 	}
 	
-	Token ret;
-	ret.id = NONE;
-	ret.value = {};
+	Token ret = (Token) {};
 	
+	const int lookahead = 2;
 	int bufsize = 16;
-	int lookahead = 2;
 	bool escape = false;
 	
-	ret.text = (char*) calloc (bufsize, sizeof (char));
+	ret.text = (char*) malloc (bufsize * sizeof (char));
+	
 	char* current = ret.text;
 	
-	static char hold = 0;
-	
-	#define get(CHAR) if (hold) {CHAR = hold; hold = 0;} else CHAR = fgetc (src)
-	#define unget(CHAR) hold = CHAR
-	
+	ret.id = getKind (current, src);
+
 	int& type = ret.id;
-	bool finished = false;
 	
-	get(*current);
-	
-	while (*current <= ' ')
-	{
-		if (*current == -1)
-			return (Token){.id = NULLTOK};
-		// skip over whitespace chars
-		get(*current);
-	}
-	
-	if (*current == -1)
-		return (Token){.id = NULLTOK};
-	
-	if (*current >= '0' && *current <= '9')
-	{
-		if (*current == '0')
-		{
-			char next;
-			get(next);
-			
-			if (next == 'b')
-				type = BIN_LITERAL;
-			else
-			if (next == 'o')
-				type = OCT_LITERAL;
-			else
-			if (next == 'x')
-				type = HEX_LITERAL;
-			else
-			{
-				type = INT_LITERAL;
-				unget(next);
-			}
-		}
-		else type = INT_LITERAL;
-	}
-	else if ((*current >= 'a' && *current <= 'z') ||
-	         (*current >= 'A' && *current <= 'Z') ||
-			  *current == '_')
-		type = TEXT;
-	
-	else if (*current == '"') type = STRING_LITERAL;
-	else if (*current == '\'') type = CHAR_LITERAL;
-	
-	else if (*current == '/')
-	{
-		char next;
-		get(next);
-		
-		// in case of a comment,
-		// skip over the slashes / asterisk
-		if (next == '/')
-		{
-			type = LINE_COMMENT;
-			get (*current);
-		}
-		else
-		if (next == '*')
-		{
-			type = BLOCK_COMMENT;
-			get (*current);
-		}
-		else
-		{
-			// didn't find a comment,
-			// put the lookahead char back
-			type = '/';
-			unget(next);
-			return ret;
-		}
-	}
-	else
-	if (*current > ' ' && *current <= '~')
-	{
-		type = *current;
-		return ret;
-	}
-	else
-	{
-		type = NONE;
-		return ret;
-	}
-	
-	while (!finished)
+	while (*current != -1)
 	{
 		// expand the buffer when needed
 		int numread = (int) (current - ret.text);
@@ -139,34 +145,31 @@ Token getTok (FILE* src)
 			escape = false;
 		
 		current++;
-		get(*current);
+		get (current, src);
 		
 		if (*current == -1)
 			return (Token){.id = NULLTOK};
 		
 		if (type == TEXT)
 		{
-			if (!
-			    ((*current >= 'a' && *current <= 'z') ||
-				 (*current >= 'A' && *current <= 'Z') ||
-				 (*current >= '0' && *current <= '9') ||
-				  *current == '_'))
-				break;
+			if (!(
+			   alphachar(*current)
+			|| numchar (*current)
+			|| *current == '_'))
+				  break;
 		}
-		
 		else
 		if (type == INT_LITERAL)
 		{
-			if (!(*current >= '0' && *current <= '9') && *current != '_')
+			if (!numchar (*current) && *current != '_')
 			{
 				if (*current == '.') type = FLOAT_LITERAL;
 				else
-				if (*current == 'f' ||
-				    *current == 'F')
+				if (*current == 'f'
+				|| *current == 'F')
 				{
 					type = FLOAT_LITERAL;
-					*current = 0;
-					return ret;
+					continue;
 				}
 				else
 					break;
@@ -175,27 +178,25 @@ Token getTok (FILE* src)
 		else
 		if (type == FLOAT_LITERAL)
 		{
-			if (!(*current >= '0' && *current <= '9') && *current != '_')
+			if (!numchar (*current) && *current != '_')
 			{
-				if (*current == 'f' ||
-				    *current == 'F')
+				if (*current == 'f'
+				|| *current == 'F')
 				{
+					hold = 0;
 					*current = 0;
 					return ret;
 				}
-				
-				else
-					break;
+				break;
 			}
 		}
 		else
 		if (type == HEX_LITERAL)
 		{
-			if (!
-			     ((*current >= '0' && *current <= '9') ||
-			     (*current >= 'a' && *current <= 'f') ||
-				 (*current >= 'A' && *current <= 'F') ||
-				  *current == '_'))
+			if (!(
+			   numchar(*current)
+			|| alphachar (*current)
+			|| *current == '_'))
 				break;
 		}
 		else
@@ -233,8 +234,7 @@ Token getTok (FILE* src)
 		{
 			if (*current == '\n')
 			{
-				*current = 0;
-				return ret;
+				break;
 			}
 		}
 		else
@@ -247,10 +247,11 @@ Token getTok (FILE* src)
 				return ret;
 			}
 		}
+		else break;
 	}
 	
-	if (*current > ' ')
-		unget(*current);
+	if (*current > ' ' && *current < '~')
+		hold = *current;
 	
 	*current = 0; // null terminator
 	return ret;
