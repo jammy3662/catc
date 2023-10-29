@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-enum Tok: char
+enum Tok
 {
 	// single printable ascii characters are their literal values
 	// i.e. PLUS = '+'
@@ -10,15 +10,24 @@ enum Tok: char
 	LESSEQUAL = (char)('~' + 2),
 	MOREEQUAL,
 	PLUSEQUAL,
-	MINUSEEQUAL,
+	MINUSEQUAL,
 	TIMESEQUAL,
 	DIVEQUAL,
 	SHIFT_L,
 	SHIFT_R,
-	
 	COMPARE,
+	INCREMENT,
+	DECREMENT,
+	AND,
+	OR,
 	
 	TEXT,
+	
+	VOID_T,
+	VAR_T, // (void*)
+	CHAR_T, SHORT_T,
+	INT_T, LONG_T,
+	FLOAT_T, DOUBLE_T,
 	
 	INT_LITERAL,
 	HEX_LITERAL,
@@ -39,6 +48,7 @@ struct Token
 {
 	int id;
 	char* text;
+	bool signd = true; // (only applies to int types)
 	
 	union
 	{

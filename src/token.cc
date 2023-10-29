@@ -1,5 +1,6 @@
 #include "token.h"
 #include <stdlib.h>
+#include <string.h>
 #include <array>
 using namespace std;
 
@@ -247,12 +248,97 @@ Token getTok (FILE* src)
 				return ret;
 			}
 		}
+		else
+		if (*current == '=')
+		{
+			char* prev = current - 1;
+			++current;
+			*current = 0;
+			
+			if (*prev == '=')
+				ret.id = COMPARE;
+			else
+			if (*prev == '+')
+				ret.id = PLUSEQUAL;
+			else
+			if (*prev == '-')
+				ret.id = MINUSEQUAL;
+			else
+			if (*prev == '*')
+				ret.id = TIMESEQUAL;
+			else
+			if (*prev == '/')
+				ret.id = DIVEQUAL;
+			else
+			if (*prev == '<')
+				ret.id = LESSEQUAL;
+			else
+			if (*prev == '>')
+				ret.id = MOREEQUAL;
+			
+			break;
+		}
+		else
+		if (*current == '+' && *(current-1) == '+')
+			ret.id = INCREMENT;
+		else
+		if (*current == '-' && *(current-1) == '-')
+			ret.id = DECREMENT;
+		else
+		if (*current == '&' && *(current-1) == '&')
+			ret.id = AND;
+		else
+		if (*current == '|' && *(current-1) == '|')
+			ret.id = OR;
+		else
+		if (*current == '<' && *(current-1) == '<')
+			ret.id = SHIFT_L;
+		else
+		if (*current == '>' && *(current-1) == '>')
+			ret.id = SHIFT_R;
 		else break;
 	}
 	
-	if (*current > ' ' && *current < '~')
+	if (*current > ' ' && *current <= '~')
 		hold = *current;
 	
 	*current = 0; // null terminator
+	
+	// parse keywords
+	if (type == TEXT)
+	{
+		if ((int)(current - ret.text) <= 8)
+		{
+			char* text = ret.text;
+			
+			if (ret.text [0] == 'u')
+				ret.signd = false, text++;
+			
+			if (!strcmp (ret.text, "void"))
+				ret.id = VOID_T;
+			else
+			if (!strcmp (ret.text, "var"))
+				ret.id = VAR_T;
+			else
+			if (!strcmp (text, "char"))
+				ret.id = CHAR_T;
+			else
+			if (!strcmp (text, "short"))
+				ret.id = SHORT_T;
+			else
+			if (!strcmp (text, "int"))
+				ret.id = INT_T;
+			else
+			if (!strcmp (text, "long"))
+				ret.id = LONG_T;
+			else
+			if (!strcmp (ret.text, "float"))
+				ret.id = FLOAT_T;
+			else
+			if (!strcmp (ret.text, "double"))
+				ret.id = DOUBLE_T;
+		}
+	}
+	
 	return ret;
 }
