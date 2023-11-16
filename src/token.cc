@@ -3,6 +3,82 @@
 #include <string.h>
 #include <array>
 using namespace std;
+//\
+trees
+void insert (const char* str, char result, Trie* trie)
+{
+	Trie* tree = trie;
+	Trie* parent = 0;
+	
+	for (; *str; ++str)
+	{
+		if (tree->value == -1)
+		{
+			// populate the first node at this level
+			tree->value = *str;
+		}
+		
+		// try to match the character at this level
+		for (; *str != tree->value; tree = tree->next)
+		{
+			if (!tree->next)
+			{
+				// if not there, add it to the end
+				tree->next = (Trie*) malloc (sizeof (Trie));
+				*tree->next = {.value = *str, .next = 0x0, .match = 0x0, .result = 0};
+			}
+		}
+		
+		if (!tree->match)
+		{
+			tree->match = (Trie*) malloc (sizeof (Trie));
+			*tree->match = {.value = -1, .next = 0x0, .match = 0x0, .result = 0};
+		}
+		parent = tree;
+		tree = tree->match;
+	}
+	
+	// null character can be left out;
+	// store result in last character of key
+	free (tree);
+	tree = parent;
+	tree->match = 0x0;
+	tree->result = result;
+}
+
+char find (const char* key, Trie trie)
+{
+	Trie* tree = &trie;
+	
+	for (; *key; ++key)
+	{
+		// try to match the character at this level
+		for (; tree->value != *key; tree = tree->next)
+		{
+			// no more characters to test against
+			if (!tree->next) return 0;
+		}
+		
+		if (tree->match) tree = tree->match;
+	}
+	
+	// check for leaf node
+	if (tree->result) return tree->result;
+	else return 0;
+}
+
+Trie prefixTree (std::initializer_list <const char*> strings)
+{
+	Trie ret = {};
+	ret.value = -1;
+	
+	for (const char* str: strings)
+	{
+		insert (str, 5, &ret);
+	}
+	
+	return ret;
+}
 
 char hold = 0;
 
@@ -151,36 +227,46 @@ Token getTok (FILE* src)
 		if (*current == -1)
 			return (Token){.id = NULLTOK};
 		
-		if (type == TEXT)
+		switch (ret.id)
 		{
-			if (!(
-			   alphachar(*current)
+		case TEXT:
+			if (!(alphachar(*current)
 			|| numchar (*current)
 			|| *current == '_'))
-				  break;
-		}
-		else
-		if (type == INT_LITERAL)
-		{
+				  goto finalize;
+			break;
+		
+		case INT_LITERAL:
 			if (!numchar (*current) && *current != '_')
 			{
-				if (*current == '.') type = FLOAT_LITERAL;
-				else
-				if (*current == 'f'
-				|| *current == 'F')
+				switch (*current)
 				{
+				case '.':
+					type = FLOAT_LITERAL;
+					break;
+				case 'f':
+				case 'F':
 					type = FLOAT_LITERAL;
 					continue;
+				default:
+					goto finalize;
 				}
-				else
-					break;
 			}
-		}
-		else
-		if (type == FLOAT_LITERAL)
-		{
+			break;
+		
+		case FLOAT_LITERAL:
 			if (!numchar (*current) && *current != '_')
 			{
+				switch (*current)
+				{
+				case 'f':
+				case 'F':
+					hold = 0;
+					*current = 0;
+					return ret;
+				default:
+					break;
+				}
 				if (*current == 'f'
 				|| *current == 'F')
 				{
@@ -188,116 +274,132 @@ Token getTok (FILE* src)
 					*current = 0;
 					return ret;
 				}
-				break;
+				goto finalize;
 			}
-		}
-		else
-		if (type == HEX_LITERAL)
-		{
-			if (!(
-			   numchar(*current)
+			break;
+		
+		case HEX_LITERAL:
+			if (!(numchar(*current)
 			|| alphachar (*current)
 			|| *current == '_'))
-				break;
-		}
-		else
-		if (type == BIN_LITERAL)
-		{
+				goto finalize;
+			break;
+		
+		case BIN_LITERAL:
 			if (*current != '0' && *current != '1' && *current != '_')
-				break;
-		}
-		else
-		if (type == OCT_LITERAL)
-		{
+				goto finalize;
+			break;
+		
+		case OCT_LITERAL:
 			if (!(*current >= '0' && *current <= '7') && *current != '_')
-				break;
-		}
-		else
-		if (type == STRING_LITERAL)
-		{
+				goto finalize;
+			break;
+		
+		case STRING_LITERAL:
 			if (*current == '\"' && !escape)
 			{
 				*(current + 1) = 0;
 				return ret;
 			}
-		}
-		else
-		if (type == CHAR_LITERAL)
-		{
+			break;
+		
+		case CHAR_LITERAL:
 			if (*current == '\'' && !escape)
 			{
 				*(current + 1) = 0;
 				return ret;
 			}
-		}
-		else
-		if (type == LINE_COMMENT)
-		{
+			break;
+		
+		case LINE_COMMENT:
 			if (*current == '\n')
 			{
-				break;
+				goto finalize;
 			}
-		}
-		else
-		if (type == BLOCK_COMMENT)
-		{
+			break;
+		
+		case BLOCK_COMMENT:
 			if (*current == '/' &&
 			    *(current - 1) == '*')
 			{
 				*(current - 1) = 0;
 				return ret;
 			}
-		}
-		else
-		if (*current == '=')
-		{
-			char* prev = current - 1;
-			++current;
-			*current = 0;
-			
-			if (*prev == '=')
-				ret.id = COMPARE;
-			else
-			if (*prev == '+')
-				ret.id = PLUSEQUAL;
-			else
-			if (*prev == '-')
-				ret.id = MINUSEQUAL;
-			else
-			if (*prev == '*')
-				ret.id = TIMESEQUAL;
-			else
-			if (*prev == '/')
-				ret.id = DIVEQUAL;
-			else
-			if (*prev == '<')
-				ret.id = LESSEQUAL;
-			else
-			if (*prev == '>')
-				ret.id = MOREEQUAL;
-			
 			break;
+		
+		case '=':
+			*(current + 1) = 0;
+			
+			switch (*(current - 1))
+			{
+			case '=':
+				ret.id = COMPARE;
+				current++;
+				goto finalize;
+			case '+':
+				ret.id = PLUSEQUAL;
+				current++;
+				goto finalize;
+			case '-':
+				ret.id = MINUSEQUAL;
+				current++;
+				goto finalize;
+			case '*':
+				ret.id = TIMESEQUAL;
+				current++;
+				goto finalize;
+			case '/':
+				ret.id = DIVEQUAL;
+				current++;
+				goto finalize;
+			case '<':
+				ret.id = LESSEQUAL;
+				current++;
+				goto finalize;
+			case '>':
+				ret.id = MOREEQUAL;
+				current++;
+				goto finalize;
+			default:
+				goto finalize;
+			}
+		
+		case '+':
+			if (*(current-1) == '+')
+				ret.id = INCREMENT;
+			goto finalize;
+		
+		case '-':
+			if (*(current-1) == '-')
+				ret.id = DECREMENT;
+			goto finalize;
+		
+		case '&':
+			if (*(current-1) == '&')
+				ret.id = AND;
+			goto finalize;
+		
+		case '|':
+			if (*(current-1) == '|')
+				ret.id = OR;
+			goto finalize;
+		
+		case '<':
+			if (*(current-1) == '<')
+				ret.id = SHIFT_L;
+			goto finalize;
+		
+		case '>':
+			if (*(current-1) == '>')
+				ret.id = SHIFT_R;
+			goto finalize;
+		
+		default:
+			goto finalize;
 		}
-		else
-		if (*current == '+' && *(current-1) == '+')
-			ret.id = INCREMENT;
-		else
-		if (*current == '-' && *(current-1) == '-')
-			ret.id = DECREMENT;
-		else
-		if (*current == '&' && *(current-1) == '&')
-			ret.id = AND;
-		else
-		if (*current == '|' && *(current-1) == '|')
-			ret.id = OR;
-		else
-		if (*current == '<' && *(current-1) == '<')
-			ret.id = SHIFT_L;
-		else
-		if (*current == '>' && *(current-1) == '>')
-			ret.id = SHIFT_R;
-		else break;
 	}
+	
+	finalize:
 	
 	if (*current > ' ' && *current <= '~')
 		hold = *current;
@@ -312,7 +414,7 @@ Token getTok (FILE* src)
 			char* text = ret.text;
 			
 			if (ret.text [0] == 'u')
-				ret.signd = false, text++;
+				ret.sined = false, text++;
 			
 			if (!strcmp (ret.text, "void"))
 				ret.id = VOID_T;
@@ -337,6 +439,15 @@ Token getTok (FILE* src)
 			else
 			if (!strcmp (ret.text, "double"))
 				ret.id = DOUBLE_T;
+			else
+			if (!strcmp (ret.text, "struct"))
+				ret.id = STRUCT_T;
+			else
+			if (!strcmp (ret.text, "union"))
+				ret.id = UNION_T;
+			else
+			if (!strcmp (ret.text, "enum"))
+				ret.id = ENUM_T;
 		}
 	}
 	

@@ -4,6 +4,8 @@
 
 int main (int argc, char** argv)
 {
+	Trie keywords = prefixTree ({"this", "that", "what", "tree", "trie", "trees"});
+	
 	FILE* file = fopen (argv [1], "r");
 	
 	Token t;
@@ -12,7 +14,10 @@ int main (int argc, char** argv)
 	while (t.id != NULLTOK)
 	{
 		t = getTok (file);
-		printf ("%i\t\t%s\n", (unsigned char) t.id, t.text);
+		printf ("%i %i\t\t%s\n",
+			(unsigned char) t.id,
+			find (t.text, keywords),
+			t.text);
 	}
 	
 	return 0;

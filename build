@@ -3,7 +3,7 @@
 mkdir -p bin
 
 cd bin
-clang++ -g3 -c ../src/*.cc
+clang++ -g3 -c ../src/*.cc -Wno-writable-strings
 cd ..
 
 clang++ bin/*.o -o catc
