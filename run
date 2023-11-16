@@ -1,2 +1,0 @@
-#!/bin/tcsh
-clear; ./build && ./catc ref/token > ref/OUT
