@@ -3,6 +3,7 @@
 #include <string.h>
 #include <array>
 using namespace std;
+//what
 //\
 trees
 void insert (const char* str, char result, Trie* trie)
@@ -50,8 +51,12 @@ char find (const char* key, Trie trie)
 {
 	Trie* tree = &trie;
 	
+	char result = 0;
+	
 	for (; *key; ++key)
 	{
+		result = tree->result;
+		
 		// try to match the character at this level
 		for (; tree->value != *key; tree = tree->next)
 		{
@@ -62,19 +67,34 @@ char find (const char* key, Trie trie)
 		if (tree->match) tree = tree->match;
 	}
 	
-	// check for leaf node
-	if (tree->result) return tree->result;
-	else return 0;
+	return result;
 }
 
-Trie prefixTree (std::initializer_list <const char*> strings)
+Trie prefixTree (list <Key> keys)
 {
 	Trie ret = {};
 	ret.value = -1;
 	
-	for (const char* str: strings)
+	for (Key key : keys)
 	{
-		insert (str, 5, &ret);
+		insert (key.key, key.value, &ret);
+	}
+	
+	return ret;
+}
+
+template <typename ... Ts>
+Trie prefixTree (Ts... keys)
+{
+	constexpr int ct = sizeof... (keys);
+	Key all [ct] = {keys...};
+	
+	Trie ret;
+	
+	for (int i = 0; i < ct; ++i)
+	{
+		Key key = all [i];
+		insert (key.key, key.value, &ret);
 	}
 	
 	return ret;
@@ -143,7 +163,7 @@ char getKind (char* current, FILE* src)
 	else
 	
 	if (alphachar (*current) || *current == '_')
-		return TEXT;
+		return SYMBOL;
 	
 	else if (*current == '"') return STRING_LITERAL;
 	else if (*current == '\'') return CHAR_LITERAL;
@@ -229,7 +249,7 @@ Token getTok (FILE* src)
 		
 		switch (ret.id)
 		{
-		case TEXT:
+		case SYMBOL:
 			if (!(alphachar(*current)
 			|| numchar (*current)
 			|| *current == '_'))
@@ -407,14 +427,14 @@ Token getTok (FILE* src)
 	*current = 0; // null terminator
 	
 	// parse keywords
-	if (type == TEXT)
+	if (type == SYMBOL)
 	{
 		if ((int)(current - ret.text) <= 8)
 		{
 			char* text = ret.text;
 			
 			if (ret.text [0] == 'u')
-				ret.sined = false, text++;
+				ret.negative = false, text++;
 			
 			if (!strcmp (ret.text, "void"))
 				ret.id = VOID_T;

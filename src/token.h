@@ -1,20 +1,33 @@
 #include <stdio.h>
 #include <initializer_list>
+#include <array>
+
+#define list std::initializer_list
+
+struct Key
+{
+	const char* key;
+	char value;
+};
 
 struct Trie
 {
 	char value;
-	Trie* next,
-	    * match;
+	Trie* next = 0x0,
+	    * match = 0x0;
 	char result;
 };
 
-Trie prefixTree (std::initializer_list
-	<const char*> strings);
+Trie prefixTree (list <Key> strings);
 
-void insert (const char* str, char result, Trie* tree);
+template <typename ... Ts>
+Trie prefixTree (Ts... keys);
 
+void insert (const char* key, char value, Trie* tree);
 char find (const char* key, Trie tree);
+
+// TODO: write a trie "compress" function that
+// groups sequential characters together
 
 enum Tok
 {
@@ -36,8 +49,9 @@ enum Tok
 	DECREMENT,
 	AND,
 	OR,
+	ELLIPSIS,
 	
-	TEXT,
+	SYMBOL,
 	
 	VOID_T,
 	VAR_T, // (void*)
@@ -47,6 +61,13 @@ enum Tok
 	CHAR_T, SHORT_T,
 	INT_T, LONG_T,
 	FLOAT_T, DOUBLE_T,
+	
+	IF, ELSE, WHILE, SWITCH, CASE,
+	DO, BREAK, DEFAULT, CONTINUE,
+	FOR, IN, RETURN,
+	
+	INLINE, SIZEOF, TYPEOF,
+	CONST, STATIC, EXTERN,
 	
 	INT_LITERAL,
 	HEX_LITERAL,
@@ -67,7 +88,7 @@ struct Token
 {
 	int id;
 	char* text;
-	bool sined = true; // (only applies to int types)
+	bool negative = true; // signed flag for int types
 	
 	union
 	{
